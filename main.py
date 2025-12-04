@@ -9,7 +9,7 @@ import uuid
 app = Flask(__name__)
 
 # Cookie string - Kendi cookie'lerinizi buraya koyun
-COOKIE_STRING = """stblid=64c0788f-2da3-41e3-8045-ac4d0d1fa72c; x-anon-token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiNWFiNjZiYjMtZTEzYS00NzhhLWI3M2EtM2YyZTE0NGVmYzhjIiwidGVhbV9pZCI6bnVsbCwiZXhwIjoxNzkxODc4NzU3LCJpc19hbm9uX3VzZXIiOnRydWV9.Fo9Nm91QnvVrqaYI6F1DhdJIeCPtNqF8ykIQlYuhNdc; _ga=GA1.1.919478197.1764574701; i18nextLng=tr; cf_clearance=1vUM3AbBDpyRq55CwUn.Yt0rg9YMO_fPPlWwz210kTM-1764864583-1.2.1.1-N.PFidQuJy51SMq8sbW8qAfF3NLjddEe7ImVY7HP5Q1wgi9U.M73v5CHZ5kIrkVBFHsAKWc93XIgywbZsY6inGrlvrQjM_BMev1YVr90L0XcLAdgJYDpQ9s6G1zo4hzUMb3ZvSo_xhqLsUum0Gieu4bXvY2NO70ljLnVFl.cp2J.pmIziPwseVfq1O_xzZeuDB6pWdzPZWQMinRUSPNA8YuKJxlfhg1dvz_KEQmVKnI; x-anonuserid=0f0b189d-06dc-4b2f-a7ec-82b67091852f; x-challenge=Y%2BuhYOoyuXrGd%2B5SzSHx0MQjID%2B%2FsdBmKdae5U0j41I%2BkR9UU2I8aDezKSTrkcN8kwMdn1YmsO3LO%2FcwFjjn6flBbnPjxcP8vMgxEknJzrIoZ7LKHzSLLpSDjXDOqdIiDP8TSgYChpW4KsySOBPJrcrbp8bOiybxmfDyS9XvB8B%2FIpeSNxw%3D; x-signature=Po%2FWDHkbDcpDIa%2Fr1xCoFnWEmopx2P3cyFWywHrxxYkRdkgY2aVe9DCDquuwH7mJC6XHqqtURULZM0iWgK1jjg%3D%3D; sso=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzZXNzaW9uX2lkIjoiMTBmZDA1NWUtNzk3NC00YjAwLWFiMDUtNDBhN2JiMWI4MWQ0In0.hzyt96l2tXF-qJPIE_VIl77zaS_xvQyVsNHiRi8hEcQ; sso-rw=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzZXNzaW9uX2lkIjoiMTBmZDA1NWUtNzk3NC00YjAwLWFiMDUtNDBhN2JiMWI4MWQ0In0.hzyt96l2tXF-qJPIE_VIl77zaS_xvQyVsNHiRi8hEcQ; x-userid=c00677ff-6c73-4f75-a54c-8c2a65d6ec9b; mp_ea93da913ddb66b6372b89d97b1029ac_mixpanel=%7B%22distinct_id%22%3A%22c00677ff-6c73-4f75-a54c-8c2a65d6ec9b%22%2C%22%24device_id%22%3A%22221a43d4-d560-4913-9aa6-82bf51db419f%22%2C%22%24search_engine%22%3A%22google%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Fwww.google.com%2F%22%2C%22%24initial_referring_domain%22%3A%22www.google.com%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22c00677ff-6c73-4f75-a54c-8c2a65d6ec9b%22%7D; _ga_8FEWB057YH=GS2.1.s1764864548$o13$g1$t1764864594$j14$l0$h0"""
+COOKIE_STRING = """stblid=64c0788f-2da3-41e3-8045-ac4d0d1fa72c; x-anon-token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiNWFiNjZiYjMtZTEzYS00NzhhLWI3M2EtM2YyZTE0NGVmYzhjIiwidGVhbV9pZCI6bnVsbCwiZXhwIjoxNzkxODc4NzU3LCJpc19hbm9uX3VzZXIiOnRydWV9.Fo9Nm91QnvVrqaYI6F1DhdJIeCPtNqF8ykIQlYuhNdc; _ga=GA1.1.919478197.1764574701; i18nextLng=tr; x-anonuserid=0f0b189d-06dc-4b2f-a7ec-82b67091852f; x-challenge=Y%2BuhYOoyuXrGd%2B5SzSHx0MQjID%2B%2FsdBmKdae5U0j41I%2BkR9UU2I8aDezKSTrkcN8kwMdn1YmsO3LO%2FcwFjjn6flBbnPjxcP8vMgxEknJzrIoZ7LKHzSLLpSDjXDOqdIiDP8TSgYChpW4KsySOBPJrcrbp8bOiybxmfDyS9XvB8B%2FIpeSNxw%3D; x-signature=Po%2FWDHkbDcpDIa%2Fr1xCoFnWEmopx2P3cyFWywHrxxYkRdkgY2aVe9DCDquuwH7mJC6XHqqtURULZM0iWgK1jjg%3D%3D; sso=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzZXNzaW9uX2lkIjoiMTBmZDA1NWUtNzk3NC00YjAwLWFiMDUtNDBhN2JiMWI4MWQ0In0.hzyt96l2tXF-qJPIE_VIl77zaS_xvQyVsNHiRi8hEcQ; sso-rw=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzZXNzaW9uX2lkIjoiMTBmZDA1NWUtNzk3NC00YjAwLWFiMDUtNDBhN2JiMWI4MWQ0In0.hzyt96l2tXF-qJPIE_VIl77zaS_xvQyVsNHiRi8hEcQ; x-userid=c00677ff-6c73-4f75-a54c-8c2a65d6ec9b; mp_ea93da913ddb66b6372b89d97b1029ac_mixpanel=%7B%22distinct_id%22%3A%22c00677ff-6c73-4f75-a54c-8c2a65d6ec9b%22%2C%22%24device_id%22%3A%22221a43d4-d560-4913-9aa6-82bf51db419f%22%2C%22%24search_engine%22%3A%22google%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Fwww.google.com%2F%22%2C%22%24initial_referring_domain%22%3A%22www.google.com%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22c00677ff-6c73-4f75-a54c-8c2a65d6ec9b%22%7D; cf_clearance=x25yPl9rjzgd9IHr9QSdY8lAe5VWTso5xuDKlMncLxk-1764865756-1.2.1.1-pU3V68i_J6FstW5LCty0OuqbV8rGqkK2niVDy0WHnkdAw86lYiTHEGKpOFLdXq5E1NXWfuPBq2H_sJM6lQvZgP1w2qlwq1djpM8BMn.LpoacwAnhIj6mNzoVZbJSX1H2lAT25lvmVtXimWfL2wq_KJbSXxiRzKS06Z15JheUlILrjKyyCXOCq7E4Tn.w.3QsLiAfpzg7idb2adQiZqHRFmjJKTOMMd3bS0YbfZPEmfo; _ga_8FEWB057YH=GS2.1.s1764864548$o13$g1$t1764865755$j60$l0$h0"""
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -555,27 +555,6 @@ def upload():
     file_content = file.read()
     file_name = file.filename
     
-    def extract_json_objects_with_positions(s):
-        """
-        Basit bir köşeli parantez (brace) dengeleyici ile string içindeki top-level JSON nesnelerini
-        (start_index, end_index, json_string) biçiminde döndürür.
-        Böylece aynı buffer içinde birden fazla JSON objesi veya kısmi parçalar işlenebilir.
-        """
-        objs = []
-        stack = 0
-        start = None
-        for i, ch in enumerate(s):
-            if ch == '{':
-                if stack == 0:
-                    start = i
-                stack += 1
-            elif ch == '}':
-                stack -= 1
-                if stack == 0 and start is not None:
-                    objs.append((start, i, s[start:i+1]))
-                    start = None
-        return objs
-
     def generate():
         try:
             # Step 1: Upload file
@@ -607,7 +586,7 @@ def upload():
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-origin',
-                'x-statsig-id': '/QtdhfpxRWvIFc3TvwN+5WHSb5oe6uQj5NKpz2OC8f29bTnh+a17l5hB8fCcdILbQpUCHfn/bPYRwZt1h+5N2nRmEmko/g',
+                'x-statsig-id': 'DXMG4qLzmlpIqv7NtEukJJn5niMDan0lX6hXOJjH+uUiWQSS0WW2l8iVdUHq7x1fXale7wnVGf7XNg+lhdIaSoNZn6T2Dg',
                 'cookie': COOKIE_STRING
             }
             
@@ -699,13 +678,10 @@ def upload():
             # Step 5: Create conversation and wait for video
             yield stream_log('=== ADIM 5/6: Video oluşturuluyor (bu biraz sürebilir...) ===')
             
-            # Güvenli mesaj oluşturma: prompt içinde özel karakterler olsa bile JSON güvenli olsun
-            safe_message = f"{media_url} {prompt} --mode=custom"
-            
             conversation_data = {
                 "temporary": True,
                 "modelName": "grok-3",
-                "message": safe_message,
+                "message": f"{media_url} {prompt} --mode=custom",
                 "fileAttachments": [asset_id],
                 "toolOverrides": {"videoGen": True},
                 "responseMetadata": {
@@ -724,7 +700,6 @@ def upload():
             headers5 = base_headers.copy()
             headers5['referer'] = f'https://grok.com/imagine/post/{asset_id}'
             
-            # stream=True ile uzun süren cevap için istek gönder
             response = requests.post(
                 'https://grok.com/rest/app-chat/conversations/new',
                 headers=headers5,
@@ -738,79 +713,32 @@ def upload():
             
             if response.status_code == 200:
                 video_url = None
-                full_video_url = None
-                buffer = ""  # gelen parçaları tutmak için buffer
-                
-                # response.iter_lines() ile gelen parçaları güvenli şekilde işle
-                for chunk in response.iter_lines():
-                    if not chunk:
-                        continue
-                    try:
-                        text = chunk.decode('utf-8', errors='replace')
-                    except Exception:
-                        # decode edilemezse ham str olarak al
-                        text = str(chunk)
-                    
-                    # Eğer "data: " prefix'i varsa kaldıralım (bazı streamler SSE formatında olabilir)
-                    cleaned = text
-                    if cleaned.startswith('data: '):
-                        cleaned = cleaned[6:]
-                    
-                    # buffer'a ekle
-                    buffer += cleaned
-                    
-                    # buffer içindeki tamamlanmış JSON objelerini tespit et
-                    found = extract_json_objects_with_positions(buffer)
-                    if not found:
-                        # henüz tamamlanmış bir JSON objesi yok; daha fazla veri bekle
-                        continue
-                    
-                    # Her bulunan JSON objesini sırayla işle
-                    for start_idx, end_idx, obj_str in found:
+                for line in response.iter_lines():
+                    if line:
                         try:
-                            data = json.loads(obj_str)
+                            data = json.loads(line.decode('utf-8'))
+                            if 'result' in data and 'response' in data['result']:
+                                streaming_response = data['result']['response'].get('streamingVideoGenerationResponse', {})
+                                progress = streaming_response.get('progress', 0)
+                                
+                                if progress > 0:
+                                    yield stream_log(f'Video oluşturma: %{progress}')
+                                
+                                if progress == 100:
+                                    video_url = streaming_response.get('videoUrl')
+                                    if video_url:
+                                        full_video_url = f"https://assets.grok.com/{video_url}"
+                                        yield stream_log(f'✓ Video URL: {full_video_url}')
+                                        yield stream_progress(90)
+                                        break
                         except Exception as e:
-                            # Eğer parse edilemezse, bunu log'la bildir ama akışı bozma
-                            yield stream_log(f'Parse error inner: {str(e)} - snippet: {obj_str[:200]}')
-                            continue
-                        
-                        # Orijinal kodun yaptığı gibi streaming içeriği kontrol et
-                        if 'result' in data and 'response' in data['result']:
-                            streaming_response = data['result']['response'].get('streamingVideoGenerationResponse', {})
-                            progress = streaming_response.get('progress', 0)
-                            
-                            if progress > 0:
-                                yield stream_log(f'Video oluşturma: %{progress}')
-                            
-                            if progress == 100:
-                                video_url = streaming_response.get('videoUrl')
-                                if video_url:
-                                    full_video_url = f"https://assets.grok.com/{video_url}"
-                                    yield stream_log(f'✓ Video URL: {full_video_url}')
-                                    yield stream_progress(90)
-                                    # break değil; diğer tamamlanmış parçaları da işle
-                        else:
-                            # Bazı satırlar yalnızca event/log içerebilir — bunu debug olarak göster
-                            # (çok fazla log olmasını istemezsen burayı azaltabilirsin)
-                            # yield stream_log(f'Unhandled streaming obj: {list(data.keys())}')
-                            pass
-                    
-                    # processed_end: son işlenen 'end_idx' i al ve buffer'ı törpüle
-                    last_end = found[-1][1]
-                    # buffer'ı son işlenen karakterin sonrasına kadar kırp
-                    buffer = buffer[last_end+1:]
-                    
-                    # Eğer video bulunduysa döngüden çıkabiliriz
-                    if full_video_url:
-                        break
+                            yield stream_log(f'Parse error: {str(e)}')
                 
-                if not full_video_url:
+                if not video_url:
                     yield stream_error('Video URL bulunamadı')
                     return
             else:
-                # response.text büyük olabileceği için sınırlı şekilde gösteriyoruz
-                snippet = response.text[:500] if hasattr(response, 'text') else ''
-                yield stream_error(f'Conversation oluşturulamadı: {response.status_code} - {snippet}')
+                yield stream_error(f'Conversation oluşturulamadı: {response.status_code} - {response.text[:500]}')
                 return
             
             # Step 6: Like post
@@ -838,7 +766,6 @@ def upload():
             yield stream_video(full_video_url)
             
         except Exception as e:
-            # Genel hata yakalama: hem kullanıcıya SSE üzerinden hata gönder, hem de log ekle
             yield stream_error(str(e))
             yield stream_log(f'✗ HATA: {str(e)}')
     
