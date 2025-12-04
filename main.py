@@ -349,6 +349,11 @@ HTML_TEMPLATE = """
             background: #d4edda;
             color: #155724;
         }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -458,44 +463,55 @@ HTML_TEMPLATE = """
                 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = ''; // Tampon bellek eklendi
                 
                 while (true) {
                     const {value, done} = await reader.read();
                     if (done) break;
                     
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\\n');
+                    // Gelen veriyi tampona ekle
+                    buffer += decoder.decode(value, {stream: true});
+                    
+                    // Satırlara böl
+                    const lines = buffer.split('\\n');
+                    
+                    // Son parçayı tamponda tut (çünkü yarım kalmış olabilir)
+                    buffer = lines.pop(); 
                     
                     for (let line of lines) {
+                        line = line.trim();
                         if (line.startsWith('data: ')) {
-                            const data = JSON.parse(line.slice(6));
-                            
-                            if (data.type === 'log') {
-                                logSection.innerHTML += `<div class="log-entry">${data.message}</div>`;
-                                logSection.scrollTop = logSection.scrollHeight;
-                            } else if (data.type === 'progress') {
-                                progressFill.style.width = data.percent + '%';
-                                progressFill.textContent = data.percent + '%';
-                            } else if (data.type === 'video') {
-                                loader.style.display = 'none';
-                                processingSection.style.display = 'none';
-                                videoSection.style.display = 'block';
+                            try {
+                                const jsonStr = line.slice(6);
+                                const data = JSON.parse(jsonStr);
                                 
-                                // Video URL'yi ayarla ve yükle
-                                videoPlayer.src = data.url;
-                                videoPlayer.load(); // Video'yu yeniden yükle
-                                
-                                // Video yüklendikten sonra oynat
-                                videoPlayer.onloadeddata = function() {
-                                    videoPlayer.play().catch(e => console.log('Autoplay engellendi:', e));
-                                };
-                                
-                                videoUrl.textContent = data.url;
-                            } else if (data.type === 'error') {
-                                alert('❌ Hata: ' + data.message);
-                                loader.style.display = 'none';
-                                statusBadge.className = 'status-badge status-error';
-                                statusBadge.textContent = '❌ Hata Oluştu';
+                                if (data.type === 'log') {
+                                    logSection.innerHTML += `<div class="log-entry">${data.message}</div>`;
+                                    logSection.scrollTop = logSection.scrollHeight;
+                                } else if (data.type === 'progress') {
+                                    progressFill.style.width = data.percent + '%';
+                                    progressFill.textContent = data.percent + '%';
+                                } else if (data.type === 'video') {
+                                    loader.style.display = 'none';
+                                    processingSection.style.display = 'none';
+                                    videoSection.style.display = 'block';
+                                    
+                                    videoPlayer.src = data.url;
+                                    videoPlayer.load();
+                                    
+                                    videoPlayer.onloadeddata = function() {
+                                        videoPlayer.play().catch(e => console.log('Autoplay engellendi:', e));
+                                    };
+                                    
+                                    videoUrl.textContent = data.url;
+                                } else if (data.type === 'error') {
+                                    loader.style.display = 'none';
+                                    statusBadge.className = 'status-badge status-error';
+                                    statusBadge.textContent = '❌ Hata Oluştu';
+                                    logSection.innerHTML += `<div class="log-entry" style="color:red">HATA: ${data.message}</div>`;
+                                }
+                            } catch (parseError) {
+                                console.log("JSON Parse bekleniyor (parça henüz tamamlanmadı):", parseError);
                             }
                         }
                     }
@@ -503,6 +519,8 @@ HTML_TEMPLATE = """
             } catch (error) {
                 alert('❌ Bir hata oluştu: ' + error.message);
                 loader.style.display = 'none';
+                statusBadge.className = 'status-badge status-error';
+                statusBadge.textContent = '❌ Bağlantı Hatası';
             } finally {
                 submitBtn.disabled = false;
             }
