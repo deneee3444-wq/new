@@ -4,7 +4,7 @@ import time
 import uuid
 import threading
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -91,9 +91,6 @@ def remove_current_account_permanently():
     # Dosyayı güncelle
     save_accounts_to_file(STATE['accounts'])
     
-    # Index yönetimi: Eleman silinince sağdakiler sola kayar, 
-    # yani index aynı kalsa bile aslında bir sonraki elemanı gösterir.
-    # Ancak liste bittiyse başa dönmeliyiz.
     if STATE['accounts']:
         STATE['current_account_index'] = STATE['current_account_index'] % len(STATE['accounts'])
     else:
@@ -102,7 +99,6 @@ def remove_current_account_permanently():
     STATE['current_token'] = None
     STATE['active_quota'] = "Hesap Silindi"
 
-# Uygulama başlarken yükle
 STATE['accounts'] = load_accounts_from_file()
 
 # --- Helper Functions ---
@@ -114,10 +110,6 @@ def get_current_account():
     return STATE['accounts'][idx]
 
 def rotate_account(delete_current=False):
-    """
-    Bir sonraki hesaba geçer. 
-    Eğer delete_current=True ise mevcut hesabı siler (otomatikman sıradaki gelir).
-    """
     if not STATE['accounts']:
         return False
     
@@ -125,13 +117,10 @@ def rotate_account(delete_current=False):
         remove_current_account_permanently()
         if not STATE['accounts']:
             return False
-        # Silme işlemi zaten index'i bir sonrakine (kaydığı için) ayarladı.
-        # Ekstra artırmaya gerek yok, sadece token sıfırla.
         STATE['current_token'] = None
         STATE['active_quota'] = "Hesaplanıyor..."
         return True
     else:
-        # Sadece geçiş yap (Silmeden) - Normalde bu istenmedi ama yedek olarak kalsın
         prev_email = get_current_account()['email']
         STATE['current_account_index'] = (STATE['current_account_index'] + 1) % len(STATE['accounts'])
         STATE['current_token'] = None
@@ -141,7 +130,6 @@ def rotate_account(delete_current=False):
         return True
 
 def login_and_get_token():
-    """Mevcut token varsa döndürür, yoksa login olup alır."""
     if STATE['current_token']:
         return STATE['current_token']
 
@@ -169,10 +157,6 @@ def login_and_get_token():
         return token
     except Exception as e:
         print(f"Login hatası ({account['email']}): {e}")
-        # Login olamıyorsa bu hesabı da geçelim/silelim mi? 
-        # Güvenlik için şimdilik sadece rotate ediyoruz (silme opsiyonel olabilir).
-        # Kullanıcı isteği: "Geç ve devam et dediysem sil". Login hatası ayrı bir durum ama
-        # genelde login olamayan hesap da işe yaramaz. Şimdilik sadece geçiyoruz.
         if rotate_account(delete_current=False): 
             return login_and_get_token()
         else:
@@ -192,45 +176,54 @@ def refresh_quota(token):
         print(f"Kota çekme hatası: {e}")
         return 0
 
-def process_task_thread(task_id, file_path, form_data):
-    # Task silindiyse çalışmayı durdur
+def process_task_thread(task_id, file_paths, form_data):
     if task_id not in STATE['tasks']: return
 
     log_msg = lambda m: STATE['tasks'][task_id]['logs'].append(m) if task_id in STATE['tasks'] else None
     
     if task_id in STATE['tasks']:
         STATE['tasks'][task_id]['status'] = 'running'
-    log_msg("İşlem başlatılıyor...")
+    
+    mode = "Text-to-Image" if not file_paths else "Image-to-Image"
+    log_msg(f"Mod: {mode} başlatılıyor...")
 
     try:
         token = login_and_get_token()
-        
-        # Upload
-        if task_id not in STATE['tasks']: return
-        log_msg("Görsel yükleniyor...")
-        upload_headers = {"Authorization": "Bearer " + token}
-        with open(file_path, "rb") as f:
-            files = {"file": (os.path.basename(file_path), f, "image/png")}
-            upload_data = {"width": "1024", "height": "1536"}
-            resp_upload = requests.post(URL_UPLOAD, headers=upload_headers, files=files, data=upload_data)
-        
-        if resp_upload.status_code not in [200, 201]:
-            log_msg(f"Upload hatası: {resp_upload.status_code}")
-            if task_id in STATE['tasks']: STATE['tasks'][task_id]['status'] = 'failed'
-            return
+        user_image_ids = []
 
-        try:
-            user_image_id = resp_upload.json()['data']['data']['id']
-        except:
-            log_msg("Görsel ID alınamadı.")
-            if task_id in STATE['tasks']: STATE['tasks'][task_id]['status'] = 'failed'
-            return
-        
+        # Upload Logic (Multiple Files)
+        if file_paths:
+            log_msg(f"{len(file_paths)} görsel yükleniyor...")
+            upload_headers = {"Authorization": "Bearer " + token}
+            
+            for f_path in file_paths:
+                if task_id not in STATE['tasks']: return
+                try:
+                    with open(f_path, "rb") as f:
+                        files = {"file": (os.path.basename(f_path), f, "image/png")}
+                        upload_data = {"width": "1024", "height": "1536"}
+                        resp_upload = requests.post(URL_UPLOAD, headers=upload_headers, files=files, data=upload_data)
+                    
+                    if resp_upload.status_code in [200, 201]:
+                        uid = resp_upload.json()['data']['data']['id']
+                        user_image_ids.append(uid)
+                    else:
+                        log_msg(f"Upload hatası ({os.path.basename(f_path)}): {resp_upload.status_code}")
+                except Exception as ex:
+                    log_msg(f"Dosya okuma hatası: {str(ex)}")
+
+            if not user_image_ids:
+                log_msg("Hiçbir görsel yüklenemedi.")
+                if task_id in STATE['tasks']: STATE['tasks'][task_id]['status'] = 'failed'
+                return
+            
+            log_msg(f"{len(user_image_ids)} görsel yüklendi.")
+
         target_api_task_id = None
 
         # Submit Loop
         while True:
-            if task_id not in STATE['tasks']: return # Check cancellation
+            if task_id not in STATE['tasks']: return 
             
             acc = get_current_account()
             if not acc:
@@ -240,15 +233,22 @@ def process_task_thread(task_id, file_path, form_data):
 
             log_msg(f"Görev gönderiliyor... ({acc['email']})")
             submit_headers = {"Authorization": "Bearer " + token}
+            
+            # Model sabitleme
+            MODEL_TYPE = "MODEL_FOUR"
+            
             payload = {
                 "prompt": form_data.get('prompt', 'odada oturuyor olsun.'),
                 "imageSize": form_data.get('image_size'),
                 "count": 1,
                 "resolution": form_data.get('resolution'),
-                "userImageIds": [user_image_id],
-                "modelType": form_data.get('model_type'),
+                "modelType": MODEL_TYPE,
                 "modelVersion": form_data.get('model_version')
             }
+            
+            # Eğer resim varsa ID'leri ekle
+            if user_image_ids:
+                payload["userImageIds"] = user_image_ids
 
             resp_submit = requests.post(URL_SUBMIT, headers=submit_headers, json=payload)
             resp_json = resp_submit.json()
@@ -276,7 +276,7 @@ def process_task_thread(task_id, file_path, form_data):
                     wait_start = time.time()
                     user_response = None
                     while time.time() - wait_start < 300:
-                        if task_id not in STATE['tasks']: return # Deleted while waiting
+                        if task_id not in STATE['tasks']: return 
                         
                         status_now = STATE['tasks'][task_id]['status']
                         if status_now == 'resume_approved':
@@ -296,7 +296,6 @@ def process_task_thread(task_id, file_path, form_data):
                         return
 
                 if should_switch_and_delete:
-                    # BURADA HESABI SİLİYORUZ (DELETE CURRENT)
                     if rotate_account(delete_current=True):
                         token = login_and_get_token()
                         continue
@@ -372,8 +371,6 @@ def upload_accounts():
                 new_accounts.append({'email': parts[0], 'password': parts[1]})
         
         added = append_accounts_to_file(new_accounts)
-        
-        # İlk yüklemede state'i güncelle
         if not STATE['current_token'] and STATE['accounts']:
             STATE['current_account_index'] = 0
             STATE['active_quota'] = "Giriş Bekleniyor"
@@ -387,29 +384,39 @@ def create_task():
     if not STATE['accounts']:
         return jsonify({'error': 'Önce hesapları yükleyin!'}), 400
     form_data = request.form.to_dict()
-    file = request.files.get('file')
-    if not file:
-        return jsonify({'error': 'Görsel seçilmedi!'}), 400
+    
+    # Çoklu dosya desteği
+    files = request.files.getlist('files[]')
+    file_paths = []
+    
+    # Dosya var mı diye kontrol et (varsa Image2Image, yoksa Text2Image)
+    if files and files[0].filename != '':
+        for file in files:
+            safe_name = f"{uuid.uuid4()}_{file.filename}"
+            path = os.path.join(app.config['UPLOAD_FOLDER'], safe_name)
+            file.save(path)
+            file_paths.append(path)
+    
     task_id = str(uuid.uuid4())
-    filename = f"{task_id}_{file.filename}"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+    
     STATE['tasks'][task_id] = {
         'id': task_id,
         'status': 'pending',
         'logs': [],
         'image_url': None,
         'params': form_data,
-        'created_at': time.time()
+        'created_at': time.time(),
+        'mode': 'Image-to-Image' if file_paths else 'Text-to-Image'
     }
-    thread = threading.Thread(target=process_task_thread, args=(task_id, filepath, form_data))
+    
+    thread = threading.Thread(target=process_task_thread, args=(task_id, file_paths, form_data))
     thread.daemon = True
     thread.start()
+    
     return jsonify({'task_id': task_id, 'message': 'İşlem başlatıldı'})
 
 @app.route('/status')
 def get_status():
-    # Sort tasks by creation time desc
     sorted_tasks = sorted(STATE['tasks'].values(), key=lambda x: x['created_at'], reverse=True)
     current_acc = "Yok"
     if STATE['accounts']:
@@ -427,14 +434,9 @@ def confirm_switch():
     data = request.json
     task_id = data.get('task_id')
     action = data.get('action') 
-    
     if task_id in STATE['tasks']:
-        if action == 'approve':
-            STATE['tasks'][task_id]['status'] = 'resume_approved'
-            return jsonify({'status': 'ok'})
-        else:
-            STATE['tasks'][task_id]['status'] = 'resume_rejected'
-            return jsonify({'status': 'ok'})
+        STATE['tasks'][task_id]['status'] = 'resume_approved' if action == 'approve' else 'resume_rejected'
+        return jsonify({'status': 'ok'})
     return jsonify({'error': 'Task not found'}), 404
 
 @app.route('/delete_task', methods=['POST'])
@@ -443,8 +445,24 @@ def delete_task():
     task_id = data.get('task_id')
     if task_id in STATE['tasks']:
         del STATE['tasks'][task_id]
-        return jsonify({'status': 'ok', 'message': 'Görev silindi'})
+        return jsonify({'status': 'ok'})
     return jsonify({'error': 'Task not found'}), 404
+
+@app.route('/delete_all_tasks', methods=['POST'])
+def delete_all_tasks():
+    STATE['tasks'] = {}
+    return jsonify({'status': 'ok'})
+
+# Resmi proxy üzerinden sunma (Download force'u bypass etmek için)
+@app.route('/proxy_image')
+def proxy_image():
+    url = request.args.get('url')
+    if not url: return "No URL", 400
+    try:
+        req = requests.get(url, stream=True)
+        return Response(stream_with_context(req.iter_content(chunk_size=1024)), content_type=req.headers['content-type'])
+    except:
+        return "Error fetching image", 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
