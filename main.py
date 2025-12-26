@@ -4,9 +4,10 @@ import time
 import uuid
 import threading
 import requests
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session
 
 app = Flask(__name__)
+app.secret_key = 'nano-banana-pro-secret-key-2024'  # Session için secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -16,7 +17,9 @@ STATE = {
     "current_account_index": 0,
     "current_token": None,
     "active_quota": "Bilinmiyor", 
-    "tasks": {}           # task_id -> {status, log, image_url, params, created_at, api_task_id}
+    "tasks": {},          # task_id -> {status, log, image_url, params, created_at, api_task_id}
+    "favorites": [],      # [{"image_url": "...", "prompt": "...", "params": {...}}]
+    "prompts": []         # [{"title": "...", "text": "..."}]
 }
 
 ACCOUNTS_FILE = 'accounts.txt'
@@ -353,6 +356,27 @@ def process_task_thread(task_id, file_paths, form_data):
 
 # --- Routes ---
 
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username', '')
+    password = data.get('password', '')
+    
+    if username == 'admin' and password == '123':
+        session['logged_in'] = True
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'error': 'Kullanıcı adı veya şifre yanlış!'})
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'success': True})
+
+@app.route('/check_session')
+def check_session():
+    return jsonify({'logged_in': session.get('logged_in', False)})
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -452,6 +476,83 @@ def delete_task():
 def delete_all_tasks():
     STATE['tasks'] = {}
     return jsonify({'status': 'ok'})
+
+@app.route('/add_favorite', methods=['POST'])
+def add_favorite():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    favorite = {
+        'image_url': data.get('image_url'),
+        'prompt': data.get('prompt'),
+        'params': data.get('params', {})
+    }
+    STATE['favorites'].append(favorite)
+    return jsonify({'success': True})
+
+@app.route('/remove_favorite', methods=['POST'])
+def remove_favorite():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    image_url = data.get('image_url')
+    STATE['favorites'] = [f for f in STATE['favorites'] if f['image_url'] != image_url]
+    return jsonify({'success': True})
+
+@app.route('/get_favorites')
+def get_favorites():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    return jsonify({'favorites': STATE['favorites']})
+
+@app.route('/add_prompt', methods=['POST'])
+def add_prompt():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    prompt = {
+        'title': data.get('title'),
+        'text': data.get('text')
+    }
+    STATE['prompts'].append(prompt)
+    return jsonify({'success': True})
+
+@app.route('/delete_prompt', methods=['POST'])
+def delete_prompt():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    index = data.get('index')
+    if 0 <= index < len(STATE['prompts']):
+        STATE['prompts'].pop(index)
+        return jsonify({'success': True})
+    return jsonify({'error': 'Invalid index'}), 400
+
+@app.route('/get_prompts')
+def get_prompts():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    return jsonify({'prompts': STATE['prompts']})
+
+@app.route('/delete_all_favorites', methods=['POST'])
+def delete_all_favorites():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    STATE['favorites'] = []
+    return jsonify({'success': True})
+
+@app.route('/delete_all_prompts', methods=['POST'])
+def delete_all_prompts():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    STATE['prompts'] = []
+    return jsonify({'success': True})
 
 # Resmi proxy üzerinden sunma (Download force'u bypass etmek için)
 @app.route('/proxy_image')
