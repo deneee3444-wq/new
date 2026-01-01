@@ -518,7 +518,7 @@ def add_prompt():
         'title': data.get('title'),
         'text': data.get('text')
     }
-    STATE['prompts'].append(prompt)
+    STATE['prompts'].insert(0, prompt)  # En son eklenen en üstte olsun
     return jsonify({'success': True})
 
 @app.route('/delete_prompt', methods=['POST'])
@@ -539,6 +539,21 @@ def get_prompts():
         return jsonify({'error': 'Unauthorized'}), 401
     
     return jsonify({'prompts': STATE['prompts']})
+
+@app.route('/edit_prompt', methods=['POST'])
+def edit_prompt():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    index = data.get('index')
+    title = data.get('title')
+    text = data.get('text')
+    
+    if 0 <= index < len(STATE['prompts']):
+        STATE['prompts'][index] = {'title': title, 'text': text}
+        return jsonify({'success': True})
+    return jsonify({'error': 'Invalid index'}), 400
 
 @app.route('/delete_all_favorites', methods=['POST'])
 def delete_all_favorites():
