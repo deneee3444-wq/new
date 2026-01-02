@@ -97,9 +97,14 @@
                 <h1 class="text-2xl font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text flex items-center gap-3 tracking-tighter">
                     <i class="fa-solid fa-bolt text-indigo-500 text-xl"></i> NANOBANANA <span class="text-xs text-gray-500 font-mono font-normal mt-1 border border-gray-800 px-1 rounded">PRO</span>
                 </h1>
-                <button onclick="logout()" class="text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-2 rounded-lg transition border border-gray-800 hover:border-red-500/30 flex items-center gap-2">
-                    <i class="fa-solid fa-right-from-bracket"></i> Çıkış
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="openGeminiChat()" class="text-xs text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 px-3 py-2 rounded-lg transition border border-gray-800 hover:border-indigo-500/30 flex items-center gap-2" title="AI Asistan">
+                        <i class="fa-solid fa-robot"></i>
+                    </button>
+                    <button onclick="logout()" class="text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-2 rounded-lg transition border border-gray-800 hover:border-red-500/30 flex items-center gap-2">
+                        <i class="fa-solid fa-right-from-bracket"></i> Çıkış
+                    </button>
+                </div>
             </div>
             
             <!-- Account Info -->
@@ -430,6 +435,84 @@
                 <div class="flex gap-3">
                     <button onclick="respondToSwitch(false)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-xl text-sm font-bold transition">Bekle</button>
                     <button onclick="respondToSwitch(true)" class="flex-1 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white py-3 rounded-xl text-sm font-bold transition shadow-lg shadow-orange-900/20">Hesabı Sil ve Geç</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GEMINI CHAT MODAL -->
+    <div id="geminiChatModal" class="fixed inset-0 z-[90] bg-black/80 hidden flex items-center justify-center backdrop-blur-md p-2 sm:p-4">
+        <div class="bg-[#0f0f12] border border-indigo-500/20 rounded-2xl w-full max-w-2xl h-[85vh] sm:h-[80vh] max-h-[700px] shadow-2xl shadow-indigo-900/20 flex flex-col relative overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 px-3 sm:px-6 py-3 sm:py-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                        <i class="fa-solid fa-robot text-white text-sm sm:text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-white font-bold text-xs sm:text-sm">AI Asistan</h2>
+                        <p class="text-gray-400 text-[9px] sm:text-[10px]">Gemini 2.5 Flash</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button onclick="clearGeminiChat()" class="text-gray-500 hover:text-yellow-400 p-1.5 sm:p-2 hover:bg-yellow-500/10 rounded-lg transition" title="Sohbeti Temizle">
+                        <i class="fa-solid fa-trash-can text-xs sm:text-sm"></i>
+                    </button>
+                    <button onclick="closeGeminiChat()" class="text-gray-500 hover:text-white p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition">
+                        <i class="fa-solid fa-xmark text-base sm:text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Chat Messages -->
+            <div id="geminiChatMessages" class="flex-1 overflow-y-auto custom-scroll p-3 sm:p-4 space-y-3 sm:space-y-4">
+                <!-- Welcome Message -->
+                <div class="flex gap-2 sm:gap-3">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot text-white text-[10px] sm:text-xs"></i>
+                    </div>
+                    <div class="bg-[#1a1a1f] border border-white/5 rounded-xl rounded-tl-none p-3 sm:p-4 max-w-[85%] sm:max-w-[80%]">
+                        <p class="text-gray-300 text-xs sm:text-sm leading-relaxed">Merhaba! 👋 Ben yapay zeka asistanınızım. Size nasıl yardımcı olabilirim? Resim veya video ekleyerek görsel sorular da sorabilirsiniz.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Media Preview Area (Hidden by default) -->
+            <div id="geminiMediaPreview" class="hidden px-3 sm:px-4 py-2 border-t border-white/5 bg-[#131315]">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="relative shrink-0">
+                        <img id="geminiMediaPreviewImg" src="" class="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-white/10">
+                        <video id="geminiMediaPreviewVideo" class="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-white/10 hidden"></video>
+                        <button onclick="removeGeminiMedia()" class="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 bg-red-500 hover:bg-red-400 text-white w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] shadow-lg">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <span id="geminiMediaName" class="text-[10px] sm:text-xs text-gray-400 truncate max-w-[150px] sm:max-w-[200px]"></span>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="p-2 sm:p-4 border-t border-white/5 bg-[#0a0a0d] shrink-0">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Media Upload Button -->
+                    <button onclick="document.getElementById('geminiMediaInput').click()" class="bg-[#1a1a1f] hover:bg-indigo-500/20 text-gray-400 hover:text-indigo-400 w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center border border-white/5 hover:border-indigo-500/30 transition shrink-0" title="Resim/Video Ekle">
+                        <i class="fa-solid fa-paperclip text-sm"></i>
+                    </button>
+                    <input type="file" id="geminiMediaInput" accept="image/*,video/*" class="hidden" onchange="handleGeminiMedia(this)">
+                    
+                    <!-- Message Input -->
+                    <textarea id="geminiMessageInput" 
+                        placeholder="Mesajınızı yazın..." 
+                        rows="1"
+                        class="flex-1 min-w-0 bg-[#1a1a1f] border border-white/10 rounded-lg sm:rounded-xl px-3 sm:px-4 text-xs sm:text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none text-gray-200 placeholder-gray-600 overflow-hidden leading-[34px] sm:leading-[38px]"
+                        style="height: 36px; min-height: 36px; max-height: 100px;"
+                        onkeydown="handleGeminiKeydown(event)"
+                        oninput="autoResizeTextarea(this)"></textarea>
+                    
+                    <!-- Send Button -->
+                    <button onclick="sendGeminiMessage()" id="geminiSendBtn" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/30 transition transform active:scale-95">
+                        <i class="fa-solid fa-paper-plane text-xs sm:text-sm"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1429,6 +1512,268 @@
         checkSession();
         setInterval(updateStatus, 2000);
         updateStatus();
+
+        // --- Gemini Chat Functions ---
+        let geminiChatHistory = [];
+        let geminiCurrentMedia = null;
+        let geminiCurrentMediaType = null;
+        let geminiIsStreaming = false;
+
+        function openGeminiChat() {
+            const modal = document.getElementById('geminiChatModal');
+            modal.classList.remove('hidden');
+            document.getElementById('geminiMessageInput').focus();
+        }
+
+        function closeGeminiChat() {
+            document.getElementById('geminiChatModal').classList.add('hidden');
+        }
+
+        function clearGeminiChat() {
+            geminiChatHistory = [];
+            geminiCurrentMedia = null;
+            geminiCurrentMediaType = null;
+            removeGeminiMedia();
+            
+            const container = document.getElementById('geminiChatMessages');
+            container.innerHTML = `
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot text-white text-xs"></i>
+                    </div>
+                    <div class="bg-[#1a1a1f] border border-white/5 rounded-xl rounded-tl-none p-4 max-w-[80%]">
+                        <p class="text-gray-300 text-sm leading-relaxed">Merhaba! 👋 Ben yapay zeka asistanınızım. Size nasıl yardımcı olabilirim? Resim veya video ekleyerek görsel sorular da sorabilirsiniz.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleGeminiMedia(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                geminiCurrentMedia = e.target.result;
+                geminiCurrentMediaType = file.type.startsWith('video') ? 'video' : 'image';
+                
+                const previewArea = document.getElementById('geminiMediaPreview');
+                const imgPreview = document.getElementById('geminiMediaPreviewImg');
+                const videoPreview = document.getElementById('geminiMediaPreviewVideo');
+                const nameSpan = document.getElementById('geminiMediaName');
+                
+                previewArea.classList.remove('hidden');
+                nameSpan.textContent = file.name;
+                
+                if (geminiCurrentMediaType === 'video') {
+                    imgPreview.classList.add('hidden');
+                    videoPreview.classList.remove('hidden');
+                    videoPreview.src = e.target.result;
+                } else {
+                    videoPreview.classList.add('hidden');
+                    imgPreview.classList.remove('hidden');
+                    imgPreview.src = e.target.result;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeGeminiMedia() {
+            geminiCurrentMedia = null;
+            geminiCurrentMediaType = null;
+            document.getElementById('geminiMediaPreview').classList.add('hidden');
+            document.getElementById('geminiMediaInput').value = '';
+            document.getElementById('geminiMediaPreviewImg').src = '';
+            document.getElementById('geminiMediaPreviewVideo').src = '';
+        }
+
+        function handleGeminiKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendGeminiMessage();
+            }
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = '40px';
+            const newHeight = Math.min(Math.max(textarea.scrollHeight, 40), 120);
+            textarea.style.height = newHeight + 'px';
+        }
+
+        function addMessageToChat(role, content, mediaPreview = null) {
+            const container = document.getElementById('geminiChatMessages');
+            const isUser = role === 'user';
+            
+            let mediaHTML = '';
+            if (mediaPreview) {
+                if (mediaPreview.type === 'image') {
+                    mediaHTML = `<img src="${mediaPreview.data}" class="max-w-[150px] sm:max-w-[200px] max-h-[120px] sm:max-h-[150px] rounded-lg border border-white/10 mb-2">`;
+                } else {
+                    mediaHTML = `<video src="${mediaPreview.data}" class="max-w-[150px] sm:max-w-[200px] max-h-[120px] sm:max-h-[150px] rounded-lg border border-white/10 mb-2" controls></video>`;
+                }
+            }
+            
+            const messageHTML = `
+                <div class="flex gap-2 sm:gap-3 ${isUser ? 'flex-row-reverse' : ''}">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 ${isUser ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-indigo-500 to-purple-600'} rounded-lg flex items-center justify-center shrink-0">
+                        <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'} text-white text-[10px] sm:text-xs"></i>
+                    </div>
+                    <div class="bg-[#1a1a1f] border border-white/5 rounded-xl ${isUser ? 'rounded-tr-none' : 'rounded-tl-none'} p-3 sm:p-4 max-w-[85%] sm:max-w-[80%]">
+                        ${mediaHTML}
+                        <div class="text-gray-300 text-xs sm:text-sm leading-relaxed gemini-message-content">${formatGeminiMessage(content)}</div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', messageHTML);
+            container.scrollTop = container.scrollHeight;
+            
+            return container.lastElementChild.querySelector('.gemini-message-content');
+        }
+
+        function formatGeminiMessage(text) {
+            // Basic markdown-like formatting
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code class="bg-black/30 px-1 rounded text-indigo-300">$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function addTypingIndicator() {
+            const container = document.getElementById('geminiChatMessages');
+            const indicatorHTML = `
+                <div id="geminiTypingIndicator" class="flex gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot text-white text-xs"></i>
+                    </div>
+                    <div class="bg-[#1a1a1f] border border-white/5 rounded-xl rounded-tl-none p-4">
+                        <div class="flex items-center gap-1">
+                            <span class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0ms;"></span>
+                            <span class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 150ms;"></span>
+                            <span class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 300ms;"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', indicatorHTML);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('geminiTypingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        async function sendGeminiMessage() {
+            if (geminiIsStreaming) return;
+            
+            const input = document.getElementById('geminiMessageInput');
+            const message = input.value.trim();
+            const sendBtn = document.getElementById('geminiSendBtn');
+            
+            if (!message && !geminiCurrentMedia) return;
+            
+            // Add user message to chat
+            const mediaPreview = geminiCurrentMedia ? { type: geminiCurrentMediaType, data: geminiCurrentMedia } : null;
+            addMessageToChat('user', message || '(Medya gönderildi)', mediaPreview);
+            
+            // Save to history (without media for now)
+            if (message) {
+                geminiChatHistory.push({ role: 'user', content: message });
+            }
+            
+            // Store media for sending, then clear immediately
+            const mediaToSend = geminiCurrentMedia;
+            const mediaTypeToSend = geminiCurrentMediaType;
+            
+            // Clear input and media immediately after adding to chat
+            input.value = '';
+            input.style.height = '40px';
+            removeGeminiMedia();
+            
+            // Disable input
+            geminiIsStreaming = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-sm"></i>';
+            
+            // Show typing indicator
+            addTypingIndicator();
+            
+            try {
+                const response = await fetch('/gemini_chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        media: mediaToSend,
+                        media_type: mediaTypeToSend,
+                        history: geminiChatHistory.slice(-10) // Last 10 messages for context
+                    })
+                });
+                
+                // Remove typing indicator
+                removeTypingIndicator();
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'API hatası');
+                }
+                
+                // Stream response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+                let messageElement = null;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                
+                                if (data.error) {
+                                    throw new Error(data.error);
+                                }
+                                
+                                if (data.text) {
+                                    if (!messageElement) {
+                                        messageElement = addMessageToChat('assistant', '');
+                                    }
+                                    fullResponse += data.text;
+                                    messageElement.innerHTML = formatGeminiMessage(fullResponse);
+                                    document.getElementById('geminiChatMessages').scrollTop = 
+                                        document.getElementById('geminiChatMessages').scrollHeight;
+                                }
+                                
+                                if (data.done) {
+                                    // Save assistant response to history
+                                    if (fullResponse) {
+                                        geminiChatHistory.push({ role: 'assistant', content: fullResponse });
+                                    }
+                                }
+                            } catch (e) {
+                                // Ignore parse errors for incomplete chunks
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                removeTypingIndicator();
+                addMessageToChat('assistant', `❌ Hata: ${error.message}`);
+            } finally {
+                geminiIsStreaming = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
+            }
+        }
     </script>
 </body>
 </html>
