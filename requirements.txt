@@ -2,3 +2,4 @@ Flask
 gunicorn
 curl_cffi
 requests
+google-generativeai
