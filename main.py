@@ -2,11 +2,18 @@ import os
 import json
 import time
 import uuid
+import base64
 import threading
 import requests
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session
+import google.generativeai as genai
 
 app = Flask(__name__)
+
+# --- Gemini API Configuration ---
+GEMINI_API_KEY = "AIzaSyAezMTS5Sbvt4NXUJe8MyNi0lJd9rUSYUs"
+genai.configure(api_key=GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel('gemini-2.5-flash')
 app.secret_key = 'nano-banana-pro-secret-key-2024'  # Session için secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -579,6 +586,121 @@ def proxy_image():
         return Response(stream_with_context(req.iter_content(chunk_size=1024)), content_type=req.headers['content-type'])
     except:
         return "Error fetching image", 500
+
+# --- Gemini Chat Endpoint ---
+@app.route('/gemini_chat', methods=['POST'])
+def gemini_chat():
+    """Gemini 2.5 Flash ile sohbet - streaming yanıt"""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.json
+        message = data.get('message', '')
+        media_data = data.get('media', None)  # Base64 encoded media
+        media_type = data.get('media_type', None)  # 'image' or 'video'
+        chat_history = data.get('history', [])
+        
+        print(f"[Gemini] Message: {message[:50]}..." if len(message) > 50 else f"[Gemini] Message: {message}")
+        print(f"[Gemini] Media: {media_type if media_type else 'None'}")
+        
+        # Build content parts
+        content_parts = []
+        
+        # Add media if provided
+        if media_data and media_type:
+            try:
+                # Remove data URL prefix if present
+                if ',' in media_data:
+                    media_data = media_data.split(',')[1]
+                
+                media_bytes = base64.b64decode(media_data)
+                
+                # Determine MIME type
+                if media_type == 'image':
+                    mime_type = 'image/jpeg'
+                elif media_type == 'video':
+                    mime_type = 'video/mp4'
+                else:
+                    mime_type = 'application/octet-stream'
+                
+                content_parts.append({
+                    "inline_data": {
+                        "mime_type": mime_type,
+                        "data": base64.b64encode(media_bytes).decode('utf-8')
+                    }
+                })
+                print(f"[Gemini] Media added: {mime_type}")
+            except Exception as e:
+                print(f"[Gemini] Media processing error: {e}")
+        
+        # Add text message
+        if message:
+            content_parts.append(message)
+        
+        if not content_parts:
+            return jsonify({'error': 'No message or media provided'}), 400
+        
+        # Convert chat history to Gemini format
+        gemini_history = []
+        for msg in chat_history:
+            role = "user" if msg.get('role') == 'user' else "model"
+            gemini_history.append({
+                "role": role,
+                "parts": [msg.get('content', '')]
+            })
+        
+        # Create chat or generate response
+        def generate():
+            try:
+                print("[Gemini] Starting generation...")
+                if gemini_history:
+                    chat = gemini_model.start_chat(history=gemini_history)
+                    response = chat.send_message(content_parts, stream=True)
+                else:
+                    response = gemini_model.generate_content(content_parts, stream=True)
+                
+                print("[Gemini] Got response, streaming chunks...")
+                chunk_count = 0
+                for chunk in response:
+                    chunk_count += 1
+                    try:
+                        # Try to get text from chunk
+                        text = None
+                        if hasattr(chunk, 'text') and chunk.text:
+                            text = chunk.text
+                        elif hasattr(chunk, 'parts') and chunk.parts:
+                            for part in chunk.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    text = part.text
+                                    break
+                        
+                        if text:
+                            print(f"[Gemini] Chunk {chunk_count}: {text[:30]}...")
+                            yield f"data: {json.dumps({'text': text})}\n\n"
+                    except Exception as chunk_error:
+                        print(f"[Gemini] Chunk error: {chunk_error}")
+                        continue
+                
+                print(f"[Gemini] Done, total chunks: {chunk_count}")
+                yield f"data: {json.dumps({'done': True})}\n\n"
+            except Exception as e:
+                print(f"[Gemini] Generation error: {e}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        
+        return Response(
+            stream_with_context(generate()), 
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+                'Connection': 'keep-alive'
+            }
+        )
+    
+    except Exception as e:
+        print(f"[Gemini] Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
