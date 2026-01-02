@@ -11,7 +11,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # --- Gemini API Configuration ---
-GEMINI_API_KEY = "AIzaSyAezMTS5Sbvt4NXUJe8MyNi0lJd9rUSYUs"
+GEMINI_API_KEY = "AIzaSyCTJzz4yX1gN5M5S8VOnQcn2_sQTzz5sN0"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel('gemini-2.5-flash')
 app.secret_key = 'nano-banana-pro-secret-key-2024'  # Session için secret key
